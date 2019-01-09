@@ -72,7 +72,7 @@ export default class ImageResize {
             (module) => {
                 module.onUpdate();
             },
-        );
+		);
     };
 
     removeModules = () => {

@@ -6,6 +6,14 @@ import { BaseModule } from './BaseModule';
 export class Toolbar extends BaseModule {
 
     onCreate = () => {
+		// Setup Class
+		const Parchment = this.quill.constructor.imports.parchment;
+		const Scope = Parchment.Scope
+		const config = {
+			whitelist: ['right', 'center', 'left'],
+		};
+		this.AlignImageClass = new Parchment.Attributor.Class('alignimg', 'ql-img-align', config)
+		this.AlignImageWidth = new Parchment.Attributor.Attribute('width', 'width')
         // Setup Toolbar
         this.toolbar = document.createElement('div');
         Object.assign(this.toolbar.style, this.options.toolbarStyles);
@@ -23,47 +31,35 @@ export class Toolbar extends BaseModule {
     onUpdate = () => { };
 
     _defineAlignments = () => {
-        const Parchment = this.quill.constructor.imports.parchment;
-        const FloatStyle = new Parchment.Attributor.Style('float', 'float');
-        const MarginStyle = new Parchment.Attributor.Style('margin', 'margin');
-        const DisplayStyle = new Parchment.Attributor.Style('display', 'display');
+
+
         this.alignments = [
             {
                 icon: IconAlignLeft,
                 apply: () => {
-                    DisplayStyle.add(this.img, 'inline');
-                    FloatStyle.add(this.img, 'left');
-                    MarginStyle.add(this.img, '0 1em 1em 0');
+					this.AlignImageClass.add(this.img, 'left')
                 },
-                isApplied: () => FloatStyle.value(this.img) == 'left',
+                isApplied: () => this.AlignImageClass.value(this.img) === 'left',
             },
             {
                 icon: IconAlignCenter,
                 apply: () => {
-                    DisplayStyle.add(this.img, 'block');
-                    FloatStyle.remove(this.img);
-                    MarginStyle.add(this.img, 'auto');
+					this.AlignImageClass.add(this.img, 'center')
                 },
-                isApplied: () => MarginStyle.value(this.img) == 'auto',
+                isApplied: () => this.AlignImageClass.value(this.img) === 'center',
             },
             {
                 icon: IconAlignRight,
-                apply: () => {
-                    DisplayStyle.add(this.img, 'inline');
-                    FloatStyle.add(this.img, 'right');
-                    MarginStyle.add(this.img, '0 0 1em 1em');
+				apply: () => {
+					this.AlignImageClass.add(this.img, 'right')
                 },
-                isApplied: () => FloatStyle.value(this.img) == 'right',
+                isApplied: () => this.AlignImageClass.value(this.img) === 'right',
             },
         ];
     };
 
     _addToolbarButtons = () => {
-        const Parchment = this.quill.constructor.imports.parchment;
-        const FloatStyle = new Parchment.Attributor.Style('float', 'float');
-        const MarginStyle = new Parchment.Attributor.Style('margin', 'margin');
-        const DisplayStyle = new Parchment.Attributor.Style('display', 'display');
-        const buttons = [];
+		const buttons = [];
         this.alignments.forEach((alignment, idx) => {
             const button = document.createElement('span');
             buttons.push(button);
@@ -72,22 +68,28 @@ export class Toolbar extends BaseModule {
                 // deselect all buttons
                 buttons.forEach(button => button.style.filter = '');
                 if (alignment.isApplied()) {
-                    // If applied, unapply
-                    FloatStyle.remove(this.img);
-                    MarginStyle.remove(this.img);
-                    DisplayStyle.remove(this.img);
+					// If applied, unapply
+					this.AlignImageClass.remove(this.img)
                 } else {
                     // otherwise, select button and apply
                     this._selectButton(button);
-                    alignment.apply();
-                }
+					alignment.apply();
+				}
+
+				// HACK: To force value update
+				const w = this.img.width || this.img.naturalWidth
+				this.AlignImageWidth.add(this.img, w - 1)
+
+				setTimeout(() => {
+					this.AlignImageWidth.add(this.img, w)
+				}, 0);
                 // image may change position; redraw drag handles
                 this.requestUpdate();
             });
             Object.assign(button.style, this.options.toolbarButtonStyles);
             if (idx > 0) {
                 button.style.borderLeftWidth = '0';
-            }
+			}
             Object.assign(button.children[0].style, this.options.toolbarButtonSvgStyles);
             if (alignment.isApplied()) {
                 // select button if previously applied
